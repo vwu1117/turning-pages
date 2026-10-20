@@ -391,11 +391,6 @@ button{font:inherit;color:inherit}
 .tray-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 
 /* ---------- camera mirror ---------- */
-.mirror{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(100px + env(safe-area-inset-bottom,0px));z-index:60;width:196px;background:var(--ink);border-radius:20px;padding:10px 10px 8px;color:var(--paper);box-shadow:0 18px 30px -12px rgba(0,0,0,.55),0 5px 0 color-mix(in srgb,var(--ink) 70%,#000);display:grid;gap:7px}
-.mirror canvas{width:100%;aspect-ratio:4/3;border-radius:26px/18px;display:block;background:#15110D;filter:sepia(.5) contrast(1.06) saturate(.9);box-shadow:inset 0 0 0 2px rgba(255,255,255,.1)}
-.mirror-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.mirror .spec{color:var(--paper);font-size:9.5px}
-.mirror button{border:1.5px solid color-mix(in srgb,var(--paper) 50%,transparent);background:transparent;color:var(--paper);border-radius:999px;font-family:var(--f-label);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;cursor:pointer}
 .app.desk-mode~.mirror{bottom:max(16px,env(safe-area-inset-bottom,0px))}
 
 /* ---------- toast ---------- */
@@ -554,7 +549,6 @@ h3.sub{font-family:var(--f-display);font-weight:600;font-size:22px;line-height:1
   .move-card{grid-template-columns:minmax(0,1fr)}
   .choices{gap:8px}
   .choice{padding:8px;border-radius:14px}
-  .mirror{width:150px;bottom:calc(92px + env(safe-area-inset-bottom,0px))}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
@@ -569,22 +563,6 @@ h3.sub{font-family:var(--f-display);font-weight:600;font-size:22px;line-height:1
 .wave-ring .track{fill:none;stroke:var(--paper);stroke-width:5}
 .wave-ring .fill{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;stroke-dasharray:138.2;stroke-dashoffset:138.2;transform:rotate(-90deg);transform-origin:24px 24px;transition:stroke-dashoffset .1s linear}
 body.cam-on [data-wave].wave-hot{outline:3px solid var(--accent);outline-offset:5px}
-.mirror-btns{display:flex;gap:5px}
-.gestures{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:12.5px;line-height:1.25}
-.gestures li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:7px;align-items:center}
-.gestures b{color:var(--gold);font-weight:700}
-.gestures i{width:22px;height:22px;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--paper) 60%,transparent);position:relative}
-.gestures i::after{content:"";position:absolute;inset:5px;border:2px solid var(--gold)}
-.gestures .g-wave::after{border-radius:50%;border-style:dashed}
-.gestures .g-sweep::after{border-width:0 0 2px 0;inset:auto 4px 9px 4px}
-.gestures .g-raise::after{border-width:2px 0 0 2px;inset:6px 7px 4px 7px;transform:rotate(45deg)}
-.gestures .g-circle::after{border-radius:50%;border-right-color:transparent}
-.mirror.min{width:132px}
-.mirror.min .gestures,.mirror.min .mirror-note{display:none}
-.mirror.min .mirror-row .spec{display:none}
-.mirror{width:214px}
-.mirror button{font-size:9.5px;padding:3px 7px;letter-spacing:.06em;white-space:nowrap}
-.mirror-row .spec{white-space:nowrap}
 
 /* the on-screen hand */
 .cursor-hand{position:fixed;left:0;top:0;width:76px;height:100px;z-index:155;pointer-events:none;opacity:0;transition:opacity .3s;filter:drop-shadow(3px 5px 0 rgba(42,33,25,.26))}
@@ -1005,6 +983,59 @@ code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--paper-shad
 .levels-demo .ld-arrow{display:none}
 @media (max-width:1250px){.levels-demo{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.levels-demo{grid-template-columns:minmax(0,1fr)}}
+
+/* =========================================================
+   Camera panel (rebuilt) and scrolling without a trackpad
+   ========================================================= */
+.mirror{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:60;width:256px;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:12px;background:var(--ink);color:var(--paper);border-radius:22px;box-shadow:0 18px 30px -12px rgba(0,0,0,.55),0 5px 0 color-mix(in srgb,var(--ink) 70%,#000)}
+.mirror-top{display:flex;align-items:center;gap:8px;min-width:0}
+.mirror-top .spec{color:var(--paper);font-size:10px;white-space:nowrap}
+.mirror-dot{width:9px;height:9px;border-radius:50%;background:#E0392B;box-shadow:0 0 0 3px rgba(224,57,43,.28);flex:none;animation:mDot 1.6s ease-in-out infinite}
+@keyframes mDot{50%{box-shadow:0 0 0 6px rgba(224,57,43,0)}}
+.mirror-top .mirror-status{min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--gold)!important;font-size:11px}
+.mirror-frame{position:relative;border-radius:14px;overflow:hidden;background:#15110D;border:2px solid color-mix(in srgb,var(--paper) 22%,transparent)}
+.mirror-frame canvas{display:block;width:100%;height:auto}
+.mirror-frame::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 22px rgba(0,0,0,.55);pointer-events:none}
+.gestures{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:13px;line-height:1.3}
+.gestures li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:center}
+.gestures b{color:var(--gold);font-weight:700}
+.gestures i{width:22px;height:22px;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--paper) 60%,transparent);position:relative}
+.gestures i::after{content:"";position:absolute;inset:5px;border:2px solid var(--gold)}
+.gestures .g-wave::after{border-radius:50%;border-style:dashed}
+.gestures .g-scroll::after{border-width:0 2px 2px 0;inset:4px 7px 8px 7px;transform:rotate(45deg)}
+.gestures .g-sweep::after{border-width:0 0 2px 0;inset:auto 4px 9px 4px}
+.gestures .g-raise::after{border-width:2px 0 0 2px;inset:6px 7px 4px 7px;transform:rotate(45deg)}
+.gestures .g-circle::after{border-radius:50%;border-right-color:transparent}
+.mirror-btns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.mirror button{border:1.5px solid color-mix(in srgb,var(--paper) 50%,transparent);background:transparent;color:var(--paper);border-radius:999px;font-family:var(--f-label);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:7px 8px;cursor:pointer;white-space:nowrap}
+.mirror button:hover{border-color:var(--paper)}
+.mirror #mirrorOff{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.mirror-note{font-size:11px;line-height:1.3;opacity:.7}
+.mirror.min{width:156px;gap:8px;padding:9px;border-radius:18px}
+.mirror.min .gestures,.mirror.min .mirror-note{display:none}
+.mirror.min .mirror-top .mirror-status{display:none}
+.mirror.min .mirror-top::after{content:"Camera on";font-family:var(--f-label);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.mirror.min .mirror-frame{border-radius:10px}
+.mirror.min button{font-size:10px;padding:6px 4px;letter-spacing:.04em}
+body.cam-on.mirror-big .app:not(.narrow) .stage.shelf-mode .shelf{padding-right:300px}
+body.cam-on:not(.mirror-big) .app:not(.narrow) .stage.shelf-mode .shelf{padding-right:184px}
+
+.scroll-aid{position:fixed;left:50%;z-index:30;transform:translateX(-50%);display:inline-flex;align-items:center;gap:12px;min-height:58px;padding:6px 26px 6px 8px;border:2.5px solid var(--ink);border-radius:999px;background:var(--paper);color:var(--ink);font:inherit;text-align:left;box-shadow:0 5px 0 var(--ink),0 16px 26px -12px rgba(0,0,0,.45);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.scroll-aid:hover{background:color-mix(in srgb,var(--gold) 30%,var(--paper))}
+.scroll-aid:active{transform:translate(-50%,4px);box-shadow:0 1px 0 var(--ink)}
+.sa-arrow{width:42px;height:42px;border-radius:50%;background:var(--gold);border:2px solid var(--ink);display:grid;place-items:center;font-size:16px;flex:none}
+.sa-text{display:grid;line-height:1.15}
+.sa-text b{font-size:18px}
+.sa-text small{font-family:var(--f-label);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-deep)}
+body:not(.cam-on) .sa-text small{display:none}
+body.cam-on .scroll-aid.wave-hot{outline:4px solid var(--accent);outline-offset:4px;background:var(--gold)}
+.scroll-aid.wave-hot .sa-arrow{animation:saDown .5s ease-in-out infinite alternate}
+.scroll-aid.up.wave-hot .sa-arrow{animation-name:saUp}
+@keyframes saDown{to{transform:translateY(5px)}}
+@keyframes saUp{to{transform:translateY(-5px)}}
+.stage.shelf-mode .shelf{padding-bottom:104px}
+.app.narrow .stage.shelf-mode{padding-bottom:104px}
+@media (max-width:640px){.scroll-aid{min-height:50px;padding-right:18px}.sa-arrow{width:36px;height:36px}.sa-text b{font-size:16px}}
 </style>
 <svg class="defs" aria-hidden="true" focusable="false">
   <defs>
@@ -1087,6 +1118,8 @@ code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--paper-shad
     </div>
     <button type="button" class="go" id="nextBtn" data-wave><span class="go-label">Turn the page <span class="dash" aria-hidden="true"></span><span aria-hidden="true">▶</span></span></button>
   </footer>
+  <button type="button" class="scroll-aid up" id="scrollUp" data-wave data-scroll="-1" hidden><span class="sa-arrow" aria-hidden="true">▲</span><span class="sa-text"><b>Back up</b><small>Point here to scroll</small></span></button>
+  <button type="button" class="scroll-aid down" id="scrollDown" data-wave data-scroll="1" hidden><span class="sa-arrow" aria-hidden="true">▼</span><span class="sa-text"><b>More below</b><small>Point here to scroll</small></span></button>
 </div>
 
 <!-- ============ family and carers ============ -->
@@ -1144,16 +1177,17 @@ code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--paper-shad
 <div class="wave-ring" id="waveRing" hidden aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="track" cx="24" cy="24" r="22"/><circle class="fill" cx="24" cy="24" r="22"/></svg></div>
 
 <div class="mirror" id="mirror" hidden>
-  <div class="mirror-row"><span class="spec">Hands-free</span><span class="mirror-btns"><button type="button" id="mirrorMin">Smaller</button><button type="button" id="mirrorOff">Turn off</button></span></div>
-  <canvas id="mirrorCanvas" width="192" height="144" aria-label="Your hands, as the camera sees them"></canvas>
-  <span class="spec mirror-status" id="mirrorStatus">Getting ready…</span>
+  <div class="mirror-top"><span class="mirror-dot" aria-hidden="true"></span><span class="spec mirror-status" id="mirrorStatus" aria-live="polite">Getting ready…</span></div>
+  <div class="mirror-frame"><canvas id="mirrorCanvas" width="256" height="192" aria-label="Your hands, as the camera sees them"></canvas></div>
   <ul class="gestures" aria-label="What the camera understands">
     <li><i class="g-wave" aria-hidden="true"></i><span><b>Point and hold</b> on a button to press it</span></li>
+    <li><i class="g-scroll" aria-hidden="true"></i><span><b>Point at ▼ or ▲</b> to scroll</span></li>
     <li><i class="g-sweep" aria-hidden="true"></i><span><b>Sweep an open hand</b> to turn the page</span></li>
     <li><i class="g-raise" aria-hidden="true"></i><span><b>Raise an open hand</b> to hear the page</span></li>
     <li><i class="g-circle" aria-hidden="true"></i><span><b>Point and circle</b> at the dial to turn it</span></li>
   </ul>
-  <span class="spec mirror-note">Stays on this screen. Nothing is recorded.</span>
+  <div class="mirror-btns"><button type="button" id="mirrorMin">Smaller</button><button type="button" id="mirrorOff">Turn off</button></div>
+  <span class="mirror-note">Only hands are tracked. Nothing is recorded.</span>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -2169,15 +2203,19 @@ const Motion = (() => {
 
   function drawMirror(hands) {
     if (!mctx || !video) return;
+    const want = video.videoWidth ? Math.round(mirror.width * video.videoHeight / video.videoWidth) : mirror.height;
+    if (Math.abs(mirror.height - want) > 1) mirror.height = want;            // match the camera's shape, so nobody looks stretched
     const mw = mirror.width, mh = mirror.height;
-    mctx.save(); mctx.translate(mw, 0); mctx.scale(-1, 1); mctx.drawImage(video, 0, 0, mw, mh); mctx.restore();
-    mctx.fillStyle = 'rgba(20,14,10,.18)'; mctx.fillRect(0, 0, mw, mh);
+    mctx.save(); mctx.translate(mw, 0); mctx.scale(-1, 1);
+    mctx.filter = 'grayscale(1) sepia(.35) brightness(.72) contrast(1.05)';  // the room fades back; the hands drawn on top stand out
+    mctx.drawImage(video, 0, 0, mw, mh); mctx.restore();
+    mctx.fillStyle = 'rgba(20,14,10,.16)'; mctx.fillRect(0, 0, mw, mh);
     if (hands) {
       hands.forEach((h) => {
-        mctx.strokeStyle = accent; mctx.lineWidth = 2.5; mctx.lineCap = 'round';
+        mctx.strokeStyle = accent; mctx.lineWidth = 3.2; mctx.lineCap = 'round';
         BONES.forEach(([a, b]) => { mctx.beginPath(); mctx.moveTo(h.pts[a].x * mw, h.pts[a].y * mh); mctx.lineTo(h.pts[b].x * mw, h.pts[b].y * mh); mctx.stroke(); });
         mctx.fillStyle = '#FBF4E4';
-        h.pts.forEach((p, i) => { mctx.beginPath(); mctx.arc(p.x * mw, p.y * mh, i === 8 ? 4 : 2, 0, 6.2832); mctx.fill(); });
+        h.pts.forEach((p, i) => { mctx.beginPath(); mctx.arc(p.x * mw, p.y * mh, i === 8 ? 5 : 2.4, 0, 6.2832); mctx.fill(); });
       });
       return;
     }
@@ -2936,7 +2974,7 @@ const Shelf = (() => {
       carousel('life', 'Life journey', years || 'Memories from your life', life, 0) +
       carousel('howto', 'How-to stories', `${how.length} everyday routine${how.length === 1 ? '' : 's'}`, how, 3) +
       `<div class="shelf-foot"><button type="button" class="key small" data-shelf-dial data-wave>Or turn the chapter dial</button></div></div></div>`;
-    requestAnimationFrame(() => { place('life'); place('howto'); });
+    requestAnimationFrame(() => { place('life'); place('howto'); ScrollAid.update(); });
   }
   function show() {
     Voice.stop(); closeTray(); Dial.close();
@@ -2948,7 +2986,7 @@ const Shelf = (() => {
     render(); $('#shelf').hidden = false; $('#shelf').scrollTop = 0; visible = true;
     updateChrome(); updateCamHints();
   }
-  function hide() { $('#shelf').hidden = true; $('#stage').classList.remove('shelf-mode'); visible = false; }
+  function hide() { $('#shelf').hidden = true; $('#stage').classList.remove('shelf-mode'); visible = false; ScrollAid.update(); }
   async function choose(id) {
     if (Book.busy) return;
     buildSpreads();
@@ -3789,6 +3827,7 @@ const Dial = (() => {
    - Sweep an open hand across to turn the page
    - Raise an open hand above your head to hear the page
    - Point at the knob and circle to turn the dial
+   - Point at the "More below" / "Back up" bars to scroll
    A drawn glove follows the reader's own hand. When they seem
    unsure, it glides over and shows them what to do.
    ========================================================= */
@@ -3812,15 +3851,18 @@ const Hands = (() => {
     return document;
   }
   function scan(root) {
-    const sel = root === document ? '#block [data-wave], #footer [data-wave], #shelf [data-wave]' : '[data-wave]';
+    const sel = root === document ? '#block [data-wave], #footer [data-wave], #shelf [data-wave], .scroll-aid' : '[data-wave]';
+    const st = $('#stage').getBoundingClientRect();
     targets = [];
     $$(sel, root).forEach((elm) => {
-      if (elm.disabled || elm.closest('[hidden]') || elm.closest('.leaf')) return;
+      if (elm.disabled || elm.hidden || elm.closest('[hidden]') || elm.closest('.leaf')) return;
       const r = elm.getBoundingClientRect();
       if (r.width < 4 || r.height < 4 || r.bottom < 0 || r.right < 0 || r.top > innerHeight || r.left > innerWidth) return;
+      if (elm.closest('#shelf') && ((r.top + r.bottom) / 2 < st.top || (r.top + r.bottom) / 2 > st.bottom)) return;   // scrolled out of view
       const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2, w = Math.max(r.width, MIN_W), h = Math.max(r.height, MIN_H);
       targets.push({ el: elm, cx, cy, bottom: r.bottom, x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2, rw: r.width, rh: r.height });
     });
+    targets.sort((a, b) => (b.el.dataset.scroll ? 1 : 0) - (a.el.dataset.scroll ? 1 : 0));   // the scroll bars sit on top of the books
   }
   const camX = (sx) => (X0 + (sx / innerWidth) * (X1 - X0)) * W;
   const camY = (sy) => (Y0 + (sy / innerHeight) * (Y1 - Y0)) * H;
@@ -3949,6 +3991,12 @@ const Hands = (() => {
     raise = Math.max(0, raise - s.dt * 2);
 
     const t = targets.find((tt) => hit.x >= tt.x0 && hit.x <= tt.x1 && hit.y >= tt.y0 && hit.y <= tt.y1);
+    if (t && t.el.dataset.scroll) {                                  // pointing at a scroll bar scrolls while the finger stays
+      idleFrom = now; acc = 0; setHot(t.el); setPose('point');
+      ScrollAid.nudge(+t.el.dataset.scroll, s.dt);
+      aim.x = lerp(aim.x, t.cx, 0.3); aim.y = lerp(aim.y, t.cy, 0.3);
+      return;
+    }
     if (t) {
       idleFrom = now;
       if (hot === t.el) acc += s.dt; else { setHot(t.el); acc = s.dt; }
@@ -3970,6 +4018,7 @@ const Hands = (() => {
       const floor = (s.frac || 0) * 2.5;
       targets.forEach((t) => { const e = share(s.heat, camX(t.x0), camY(t.y0), camX(t.x1), camY(t.y1), HAND); if (e > bestE && e > floor) { bestE = e; best = t; } });
     }
+    if (best && best.el.dataset.scroll) { idleFrom = now; acc = 0; setHot(best.el); setPose('point'); aim.x = best.cx; aim.y = best.cy; ScrollAid.nudge(+best.el.dataset.scroll, s.dt); return; }
     if (best) {
       idleFrom = now;
       if (!hot || hot === best.el) { setHot(best.el); acc += s.dt; }
@@ -4010,10 +4059,15 @@ const Hands = (() => {
   function fitMirror() {
     const m = $('#mirror');
     if (!m || m.dataset.user) return;
-    const ref = Book.opened ? $('#book') : $('#shelf');
-    const gutter = innerWidth - (ref ? ref.getBoundingClientRect().right : innerWidth);
-    m.classList.toggle('min', isNarrow() || gutter < 230);
-    $('#mirrorMin').textContent = m.classList.contains('min') ? 'Tips' : 'Smaller';
+    const gutter = Book.opened ? innerWidth - $('#book').getBoundingClientRect().right : innerWidth;
+    m.classList.toggle('min', isNarrow() || innerWidth < 1100 || gutter < 280);
+    syncMirror();
+  }
+  function syncMirror() {
+    const min = $('#mirror').classList.contains('min');
+    $('#mirrorMin').textContent = min ? 'Show tips' : 'Smaller';
+    document.body.classList.toggle('mirror-big', !min);
+    ScrollAid.update();
   }
   function init() {
     hand = $('#cursorHand'); say = hand.querySelector('.ch-say');
@@ -4029,16 +4083,64 @@ const Hands = (() => {
     });
     $('#mirrorMin').addEventListener('click', () => {
       const m = $('#mirror'); m.dataset.user = '1';
-      const min = m.classList.toggle('min'); $('#mirrorMin').textContent = min ? 'Tips' : 'Smaller';
+      m.classList.toggle('min'); syncMirror();
     });
     window.addEventListener('resize', () => { if (Motion.on) fitMirror(); });
     requestAnimationFrame(frame);
   }
   return {
     init, flourish, fitMirror,
+    get state() { return { mode, cool, targets: targets.map((t) => t.el.id || t.el.className), hit: { ...hit }, hot: hot && (hot.id || hot.className) }; },   // for tests
     setAccent() { /* the hand takes its colours from the page */ },
     pause(ms) { if (ring) reset(ms); idleFrom = performance.now(); },
   };
+})();
+/* =========================================================
+   Scrolling without a trackpad. Whenever the reader's view
+   can scroll, big "More below" / "Back up" bars appear.
+   Tap or click one to move most of a screen; with the camera
+   on, pointing at one scrolls for as long as the finger stays.
+   ========================================================= */
+const ScrollAid = (() => {
+  const SPEED = 460;                                  // px a second while a finger points at a bar
+  let up = null, down = null, queued = false;
+
+  function scroller() {
+    if (Router.view !== 'reader' || !$('#tray').hidden || Dial.isOpen) return null;
+    return [$('#shelf'), $('#stage'), document.scrollingElement].find((el) => el && !el.hidden && el.getClientRects().length &&
+      el.scrollHeight > el.clientHeight + 4 && (el === document.scrollingElement || /auto|scroll/.test(getComputedStyle(el).overflowY))) || null;
+  }
+  function update() {
+    queued = false;
+    if (!up) return;
+    const sc = scroller();
+    const canUp = !!sc && sc.scrollTop > 8, canDown = !!sc && sc.scrollTop + sc.clientHeight < sc.scrollHeight - 8;
+    const r = $('#stage').getBoundingClientRect();
+    up.hidden = !canUp; down.hidden = !canDown;
+    up.style.top = `${Math.round(Math.max(8, r.top + 12))}px`;
+    down.style.bottom = `${Math.round(Math.max(8, innerHeight - r.bottom + 14))}px`;
+    const shelf = Shelf.visible;
+    up.querySelector('b').textContent = shelf ? 'Back to the top' : 'Back up';
+    down.querySelector('b').textContent = shelf ? 'More books below' : 'More below';
+  }
+  const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+  function step(dir) {
+    const sc = scroller(); if (!sc) return;
+    sc.scrollBy({ top: dir * sc.clientHeight * 0.7, behavior: REDUCED ? 'auto' : 'smooth' });
+  }
+  function nudge(dir, dt) {                           // called by the hand tracker every frame a finger points at a bar
+    const sc = scroller(); if (!sc) return false;
+    sc.scrollTop += dir * SPEED * Math.min(dt, 0.1);
+    queue(); return true;
+  }
+  function init() {
+    up = $('#scrollUp'); down = $('#scrollDown');
+    [up, down].forEach((b) => b.addEventListener('click', () => { Sound.click(); step(+b.dataset.scroll); }));
+    document.addEventListener('scroll', queue, true);             // element scrolls don't bubble, so listen while capturing
+    window.addEventListener('resize', queue);
+    setInterval(update, 700);                                     // catches content that grows (pictures loading, re-renders)
+  }
+  return { init, update: queue, step, nudge };
 })();
 /* =========================================================
    The family portal: a separate app for family and carers.
@@ -5084,7 +5186,7 @@ const Router = {
       if (Cam.mode === 'always') Cam.want('always');
     }
     if (v === 'family') renderPortal();
-    window.scrollTo(0, 0);
+    window.scrollTo(0, 0); ScrollAid.update();
   },
 };
 
@@ -5140,7 +5242,7 @@ async function boot() {
   S = clone(SEED);                                  // placeholder until a book is opened; never saved
   setDeckle(); applyEra(); buildSpreads();
   Motion.setMirror($('#mirrorCanvas'));
-  Dial.init(); Hands.init(); Shelf.init(); Front.init(); Onboard.init(); initPortal();
+  Dial.init(); Hands.init(); ScrollAid.init(); Shelf.init(); Front.init(); Onboard.init(); initPortal();
 
   $('#block').addEventListener('click', onBookClick);
   $('#block').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.cover')) { e.preventDefault(); openBook(Book.idx); } });
@@ -5162,7 +5264,7 @@ async function boot() {
     if (Shelf.visible) Shelf.render();
   });
   Motion.onStatus((st) => {
-    $('#mirrorStatus').textContent = st === 'ready' ? 'Watching for hands' : st === 'loading' ? 'Getting ready to see hands…' : st === 'failed' ? 'Simple mode: following movement' : 'Camera';
+    $('#mirrorStatus').textContent = st === 'ready' ? 'Watching for hands' : st === 'loading' ? 'Getting ready to see hands…' : st === 'failed' ? 'Following movement (simple mode)' : 'Camera on';
   });
   const sweep = sweepTracker();
   Motion.subscribe((s) => {                         // the simple fallback still turns pages with a big sweep
