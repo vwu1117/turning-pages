@@ -2074,7 +2074,7 @@ const Motion = (() => {
   let video = null, stream = null, raf = 0, on = false, lastT = 0, prev = null, prevSkin = null;
   let mirror = null, mctx = null, accent = '#C4551D';
   let landmarker = null, tracker = 'idle';             // idle | loading | ready | failed
-  let prevHands = [], leadId = null, nextId = 1, lastHands = [];
+  let prevHands = [], leadId = null, nextId = 1, lastHands = [], switchFrames = 0;
 
   /* ---------- the hand tracker ---------- */
   async function loadTracker() {
@@ -2156,7 +2156,8 @@ const Motion = (() => {
     prevHands = found; lastHands = found;
     let lead = found.find((h) => h.id === leadId) || null;               // the hand doing the work, with a little stickiness
     const fastest = found.reduce((a, h) => (!a || h.speed > a.speed ? h : a), null);
-    if (!lead || (fastest && fastest !== lead && fastest.speed > lead.speed + 0.6)) lead = fastest;
+    switchFrames = lead && fastest && fastest !== lead && fastest.speed > lead.speed + 0.6 ? switchFrames + 1 : 0;
+    if (!lead || switchFrames >= 6) { lead = fastest; switchFrames = 0; }   // the other hand takes over only after ~0.2 s of clearly leading
     if (!lead && found.length) lead = found.reduce((a, h) => (h.size > a.size ? h : a));
     leadId = lead ? lead.id : null;
     for (let i = 0; i < N; i++) heat[i] *= 0.8;
@@ -3840,7 +3841,50 @@ const Hands = (() => {
   let ring = null, ringFill = null, hand = null, say = null;
   let targets = [], lastScan = 0, hot = null, acc = 0, cool = 0, raise = 0, knobPrev = null, knobAcc = 0;
   let mode = 'follow', pose = 'point', lastSeen = 0, live = false, idleFrom = 0, demoKey = null, raiseSpot = null;
-  const pos = { x: 0, y: 0 }, aim = { x: 0, y: 0 }, hit = { x: 0, y: 0 }, sweepPts = [];
+  const pos = { x: 0, y: 0, v: 0 }, aim = { x: 0, y: 0 }, hit = { x: 0, y: 0, v: 0 }, aimF = { x: 0, y: 0 }, sweepPts = [];
+  let tipMix = 1, lastLeadId = null, spike = null, shown = false, lastFrame = 0;
+
+  /* ---------- calm motion ----------
+     Webcam fingertips wobble and sometimes leap. The pointer is cleaned up in three steps:
+     1. a One Euro filter: heavy smoothing when the hand is nearly still, light when it moves on purpose
+     2. a one-frame leap across the screen is treated as a glitch until a second frame confirms it
+     3. the drawn hand (and the point used for pressing) eases toward the finger with a top speed
+        and an acceleration limit, so it never darts or lurches */
+  const MAX_SPEED = () => clamp(innerWidth * 1.05, 800, 1400);      // px a second
+  const ACCEL = 4200;                                                  // px a second, per second
+  function oneEuro(minCutoff = 1.1, beta = 0.01, dCutoff = 1) {
+    let x = null, dx = 0, last = 0;
+    const alpha = (cut, dt) => 1 / (1 + 1 / (2 * Math.PI * cut * dt));
+    return {
+      reset() { x = null; dx = 0; },
+      f(v, now) {
+        if (x == null) { x = v; last = now; return v; }
+        const dt = Math.max(0.005, (now - last) / 1000); last = now;
+        dx += alpha(dCutoff, dt) * ((v - x) / dt - dx);
+        x += alpha(minCutoff + beta * Math.abs(dx), dt) * (v - x);
+        return x;
+      },
+    };
+  }
+  const fx = oneEuro(), fy = oneEuro();
+  function glide(p, to, dt, rate) {                 // ease toward a point, capped in speed and acceleration
+    const dx = to.x - p.x, dy = to.y - p.y, d = Math.hypot(dx, dy);
+    if (d < 0.5 || dt <= 0) { p.v = 0; return; }
+    const want = (d * (1 - Math.exp(-dt * rate))) / dt;
+    p.v = Math.min(want, MAX_SPEED(), p.v + ACCEL * dt);
+    const step = Math.min(d, p.v * dt);
+    p.x += (dx / d) * step; p.y += (dy / d) * step;
+  }
+  function steady(rx, ry, now, fresh) {             // raw screen point in, calm point out (null = ignore this frame)
+    const far = Math.hypot(rx - aimF.x, ry - aimF.y) > Math.max(innerWidth, innerHeight) * 0.28;
+    if (fresh) { fx.reset(); fy.reset(); spike = null; }
+    else if (far) {
+      if (!spike || Math.hypot(rx - spike.x, ry - spike.y) > 90) { spike = { x: rx, y: ry }; return null; }
+      fx.reset(); fy.reset(); spike = null;           // confirmed: the hand really moved there
+    } else spike = null;
+    aimF.x = fx.f(rx, now); aimF.y = fy.f(ry, now);
+    return aimF;
+  }
 
   function scope() {
     if (Router.view !== 'reader') return null;
@@ -3905,7 +3949,7 @@ const Hands = (() => {
     const b = pc.querySelector('[data-read]') || pc.querySelector('[data-hear]');
     if (!b) return;
     if (b.matches('[data-read]')) speakPage(pc, b); else b.click();
-    mode = 'flourish'; setPose('read'); pos.x = spot.x; pos.y = spot.y; place(); hand.classList.add('on'); ring.hidden = true;
+    mode = 'flourish'; setPose('read'); pos.x = spot.x; pos.y = spot.y; pos.v = 0; place(); hand.classList.add('on'); ring.hidden = true;
     setTimeout(() => { mode = 'follow'; setPose('point'); }, 1800);
   }
   async function flourish(dir) {
@@ -3916,7 +3960,7 @@ const Hands = (() => {
     await sleep(40);
     hand.classList.add('sweeping'); pos.x = innerWidth * (dir > 0 ? 0.24 : 0.76); place();
     await sleep(680); hand.classList.remove('on'); await sleep(260);
-    hand.classList.remove('sweeping', 'flip'); setPose('point'); mode = 'follow'; idleFrom = performance.now();
+    hand.classList.remove('sweeping', 'flip'); setPose('point'); mode = 'follow'; shown = false; idleFrom = performance.now();
   }
   function knobTurn(px, py) {                                // the fingertip circling the knob turns it
     const r = Dial.knobRect(); if (!r) return false;
@@ -3958,18 +4002,22 @@ const Hands = (() => {
     await sleep(2600);
     s.el.classList.remove('wave-hot'); say.hidden = true; hand.classList.remove('on');
     await sleep(320); hand.classList.remove('gliding'); setPose('point');
-    mode = 'follow'; idleFrom = performance.now();
+    mode = 'follow'; shown = false; idleFrom = performance.now();
   }
 
   /* ---------- real hands (the tracker) ---------- */
   function fromHands(s, root, now) {
     const lead = s.lead;
     if (!lead) { acc = Math.max(0, acc - s.dt * 2); if (!acc) setHot(null); raise = 0; sweepPts.length = 0; knobPrev = null; return; }
-    lastSeen = now;
-    const px = lead.point ? lead.tx : lead.x, py = lead.point ? lead.ty : lead.y - lead.size * 0.5;
-    aim.x = screenX(px); aim.y = screenY(py);
-    const jump = Math.hypot(aim.x - hit.x, aim.y - hit.y) > 220;          // a steadied fingertip for hit-testing
-    hit.x = jump ? aim.x : lerp(hit.x, aim.x, 0.45); hit.y = jump ? aim.y : lerp(hit.y, aim.y, 0.45);
+    const fresh = now - lastSeen > 350 || lead.id !== lastLeadId;      // a hand (re)appearing starts from where it is
+    lastSeen = now; lastLeadId = lead.id;
+    tipMix = clamp(tipMix + (lead.point ? 1 : -1) * Math.min(s.dt, 0.1) / 0.25, 0, 1);   // glide between fingertip and palm, never jump
+    const px = lerp(lead.x, lead.tx, tipMix), py = lerp(lead.y - lead.size * 0.5, lead.ty, tipMix);
+    const c = steady(screenX(px), screenY(py), now, fresh);
+    if (!c) return;
+    aim.x = c.x; aim.y = c.y;
+    if (fresh) { hit.x = c.x; hit.y = c.y; hit.v = 0; }                 // the point used for pressing moves as calmly as the drawn hand
+    else glide(hit, c, Math.min(s.dt, 0.1), 16);
     if (now < cool || mode !== 'follow') return;
 
     if (root === document && Book.opened && S.settings.airTurn && lead.open && !hot) {   // an open hand sweeping across turns the page
@@ -4002,7 +4050,7 @@ const Hands = (() => {
       if (hot === t.el) acc += s.dt; else { setHot(t.el); acc = s.dt; }
     } else { acc = Math.max(0, acc - s.dt * 2.5); if (!acc) setHot(null); }
     const cur = hot && targets.find((tt) => tt.el === hot);
-    setPose(cur || lead.point ? 'point' : 'open');
+    setPose(cur || tipMix > 0.5 ? 'point' : 'open');
     if (cur) { aim.x = lerp(aim.x, cur.cx, 0.35); aim.y = lerp(aim.y, cur.bottom - 6, 0.35); }
     if (cur && acc >= HOLD) press(cur);
   }
@@ -4010,7 +4058,7 @@ const Hands = (() => {
   /* ---------- fallback: movement only (when the tracker can't load) ---------- */
   function fromMotion(s, root, now) {
     const calm = (s.frac || 0) < 0.22;
-    if (s.x != null) { aim.x = screenX(s.x); aim.y = screenY(s.y); lastSeen = now; }
+    if (s.x != null) { const c = steady(screenX(s.x), screenY(s.y), now, now - lastSeen > 600); lastSeen = now; if (c) { aim.x = c.x; aim.y = c.y; } }
     if (now < cool || mode !== 'follow') return;
     if (root.id === 'dial' && s.x != null && knobTurn(aim.x, aim.y)) return;
     let best = null, bestE = NEED;
@@ -4040,19 +4088,19 @@ const Hands = (() => {
     if (s.kind === 'hands') fromHands(s, root, now); else fromMotion(s, root, now);
   }
 
-  function frame() {
-    requestAnimationFrame(frame);
+  function frame(once) {
+    if (once !== true) requestAnimationFrame(frame);
     if (!hand || mode !== 'follow') return;
-    const now = performance.now();
+    const now = performance.now(), dt = lastFrame ? Math.min(0.05, (now - lastFrame) / 1000) : 0.016; lastFrame = now;
     const show = Motion.on && live && now - lastSeen < (Motion.tracker === 'ready' ? 500 : 1100);
     hand.classList.toggle('on', show);
     if (show) {
-      const dist = Math.hypot(aim.x - pos.x, aim.y - pos.y);
-      const k = dist > 160 ? 0.42 : dist > 40 ? 0.28 : 0.16;          // smooth small jitters, keep up with big moves
-      pos.x = lerp(pos.x, aim.x, k); pos.y = lerp(pos.y, aim.y, k); place();
+      if (!shown) { pos.x = aim.x; pos.y = aim.y; pos.v = 0; }       // appear where the hand is; don't fly in from the last spot
+      glide(pos, aim, dt, 12); place();
       const p = raise > 0.05 ? raise / 0.9 : acc / HOLD;
       if (p > 0.03) ringAt(pos.x, pos.y, pose === 'open' ? 92 : 50, p); else ring.hidden = true;
     } else ring.hidden = true;
+    shown = show;
     if (Motion.on && live && !hot && !raise && now - idleFrom > 9000 && demoKey !== pageKey() && scope() === document) demo();
   }
 
@@ -4090,7 +4138,8 @@ const Hands = (() => {
   }
   return {
     init, flourish, fitMirror,
-    get state() { return { mode, cool, targets: targets.map((t) => t.el.id || t.el.className), hit: { ...hit }, hot: hot && (hot.id || hot.className) }; },   // for tests
+    get state() { return { mode, cool, targets: targets.map((t) => t.el.id || t.el.className), hit: { ...hit }, aim: { ...aim }, pos: { ...pos }, tipMix, hot: hot && (hot.id || hot.className) }; },   // for tests
+    tick() { frame(true); },                                                       // for tests: one drawing frame
     setAccent() { /* the hand takes its colours from the page */ },
     pause(ms) { if (ring) reset(ms); idleFrom = performance.now(); },
   };
@@ -4103,7 +4152,7 @@ const Hands = (() => {
    ========================================================= */
 const ScrollAid = (() => {
   const SPEED = 460;                                  // px a second while a finger points at a bar
-  let up = null, down = null, queued = false;
+  let up = null, down = null, queued = false, vel = 0, lastNudge = 0, lastDir = 0;
 
   function scroller() {
     if (Router.view !== 'reader' || !$('#tray').hidden || Dial.isOpen) return null;
@@ -4130,7 +4179,11 @@ const ScrollAid = (() => {
   }
   function nudge(dir, dt) {                           // called by the hand tracker every frame a finger points at a bar
     const sc = scroller(); if (!sc) return false;
-    sc.scrollTop += dir * SPEED * Math.min(dt, 0.1);
+    const now = performance.now(), step = Math.min(dt, 0.1);
+    if (now - lastNudge > 220 || dir !== lastDir) vel = 0;           // each new point starts slowly…
+    vel = Math.min(SPEED, vel + SPEED * 2 * step);                    // …and reaches full speed after half a second
+    lastNudge = now; lastDir = dir;
+    sc.scrollTop += dir * vel * step;
     queue(); return true;
   }
   function init() {
